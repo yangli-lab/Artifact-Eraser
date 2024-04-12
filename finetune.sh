@@ -1,0 +1,22 @@
+CUDA_VISIBLE_DEVICES=0 python3 ./scripts/train_finetune.py --dataset_type ffhq_encode \
+--exp_dir ./exp/celebdf_decoder2 \
+--start_from_latent_avg \
+--use_w_pool \
+--w_discriminator_lambda 0 \
+--progressive_start 0 \
+--train_encoder 0 \
+--train_decoder 1 \
+--lpips_lambda 1.0 \
+--id_lambda 0.1 \
+--l2_lambda 1.0 \
+--val_interval 1000 \
+--max_steps 1000 \
+--image_interval 100 \
+--board_interval 100 \
+--stylegan_size 1024 \
+--save_interval 500 \
+--checkpoint_path ./exp/celebdf_2/checkpoints/interation_80000.pt \
+--workers 4 \
+--batch_size 8 \
+--test_batch_size 2 \
+--test_workers 4 
