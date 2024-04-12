@@ -1,6 +1,6 @@
 <div align="center">
     <div>
-    <a href="arxiv.index"><img src="https://img.shields.io/badge/Arxiv"/></a>
+    <a href="arxiv.index"><img src="https://img.shields.io/badge/Arxiv-2401:08276-red"/></a>
     <!-- <a href=> -->
     </div>
 
