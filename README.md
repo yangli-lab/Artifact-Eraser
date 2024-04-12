@@ -1,14 +1,17 @@
 <div align="center">
-    <div>
-    <a href="arxiv.index"><img src="https://img.shields.io/badge/Arxiv-2401:08276-red"/></a>
-    <!-- <a href=> -->
-    </div>
+    
+ <div>
+     <a href="arxiv.index"><img src="https://img.shields.io/badge/Arxiv-2401:08276-red"/></a>
 
-    <h1> Counterfactual Explanations for Face Forgery Detection Via Adversarial Removal of Artifacts </h1>
+   </div>
+
+  <h1>Counterfactual Explanations for Face Forgery Detection Via Adversarial Removal of Artifacts </h1>
 
 </div>
+
 <br>
-Training code for the paper [Counterfactual Explanations for Face Forgery Detection Via Adversarial Removal of Artifacts]().
+
+Training code for ICME 2024 paper [Counterfactual Explanations for Face Forgery Detection Via Adversarial Removal of Artifacts]().
 
 ## Getting Started
 
@@ -16,8 +19,8 @@ Training code for the paper [Counterfactual Explanations for Face Forgery Detect
 
 - clone the repository:
 ```
-git clone 
-cd
+git clone https://github.com/yangli-lab/Artifact-Eraser
+cd Artifact-Eraser
 ```
 
 
@@ -41,7 +44,6 @@ Please download the pretrained models from the following links and save them in 
 
 
 ## Training
-<bar>
 
 ### Training the e4e encoder
 The training code of [E4E encoder](https://arxiv.org/abs/2102.02766) is borrowed from their [official repository](https://github.com/omertov/encoder4editing).
@@ -130,7 +132,6 @@ CUDA_VISIBLE_DEVICES=0 python3 ./attack/attack_celebdf.py \
 ```
 
 ## Acknowledgments
-<bar>
 
 This code borrows heavily from [e4e_encoder](https://github.com/omertov/encoder4editing)
 
