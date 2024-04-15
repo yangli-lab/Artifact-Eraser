@@ -1,7 +1,7 @@
 <div align="center">
     
  <div>
-     <a href="arxiv.index"><img src="https://img.shields.io/badge/Arxiv-2401:08276-red"/></a>
+     <a href="arxiv.index"><img src="https://img.shields.io/badge/Arxiv-2404.08341-red"/></a>
 
    </div>
 
@@ -11,7 +11,7 @@
 
 <br>
 
-Training code for ICME 2024 paper [Counterfactual Explanations for Face Forgery Detection Via Adversarial Removal of Artifacts]().
+Training code for ICME 2024 paper [Counterfactual Explanations for Face Forgery Detection Via Adversarial Removal of Artifacts](https://arxiv.org/abs/2404.08341).
 
 ## Getting Started
 
@@ -74,7 +74,7 @@ CUDA_VISIBLE_DEVICES=0 python ./scripts/train_finetune.py --dataset_type ffhq_en
 ```
 
 ### Training Classifier(Optional)
-You can use your pretrained deepfake classifier model, or train with the provided code, please refer to the `classifiers` folder.
+You can use your pretrained deepfake classifier model or train a new one with the provided code, please refer to the `classifiers` folder.
 Let's take training `MAT` as an example
 ```bash
 CUDA_VISIBLE_DEVICES=0 python3 ./classifiers/train_mat.py \
@@ -133,7 +133,7 @@ CUDA_VISIBLE_DEVICES=0 python3 ./attack/attack_celebdf.py \
 
 ## Acknowledgments
 
-This code borrows heavily from [e4e_encoder](https://github.com/omertov/encoder4editing)
+This code borrows heavily from [e4e_encoder](https://github.com/omertov/encoder4editing).
 
 
 ## Citation
