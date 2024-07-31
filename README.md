@@ -139,5 +139,10 @@ This code borrows heavily from [e4e_encoder](https://github.com/omertov/encoder4
 ## Citation
 If you find our work interesting, please feel free to cite our paper:
 ```bibtex
-put the citation here
+@article{li2024counterfactual,
+  title={Counterfactual Explanations for Face Forgery Detection via Adversarial Removal of Artifacts},
+  author={Li, Yang and Yang, Songlin and Wang, Wei and He, Ziwen and Peng, Bo and Dong, Jing},
+  journal={arXiv preprint arXiv:2404.08341},
+  year={2024}
+}
 ```
