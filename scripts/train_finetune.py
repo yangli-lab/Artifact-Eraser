@@ -15,7 +15,7 @@ sys.path.append("..")
 
 
 from options.train_options import TrainOptions
-from training.coach_celebdf import Train
+from training.coach_finetune import Train
 
 
 def main():
