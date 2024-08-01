@@ -34,7 +34,7 @@ from classifiers.multiple_attention.mat_models.MAT import MAT
 from classifiers.RECCE.recce_model.network import Recce
 from classifiers.I3D.model import  load_pretrained_I3D_RES
 from classifiers.multiple_attention.config import train_config
-from data_transform.transform_config import get_transform
+from data_transform.transform_config import DFDC_Transform
 from utils.common import tensor2im
 from glob import glob
 from PIL import Image
@@ -78,7 +78,7 @@ class Attack_Video(nn.Module):
             ckpt = torch.load(opts.classifier_ckpt, map_location = 'cpu')
             self.classifier.load_state_dict(ckpt, strict = True)
         elif opts.classifier == 'efficient':
-            self.classifier = load_pretrained_efficient(encoder_name = "tf_efficientnet_b7_ns", classes = 2, device = opts.device)
+            self.classifier = load_pretrained_efficient(path=None, encoder_name = "tf_efficientnet_b7_ns", classes = 2, device = opts.device)
             ckpt = torch.load(opts.classifier_ckpt, map_location = 'cpu')
             self.classifier.load_state_dict(ckpt, strict = True)
         elif opts.classifier == 'slowfast':
@@ -181,6 +181,94 @@ class Attack_Video(nn.Module):
         else:
             raise ValueError("loss_type must be in ['cross_entropy', 'mse_loss']")
         return loss_fn
+
+    def fgsm_attack(self, x, label, use_sign = 'yes'):
+        ims = x.squeeze(dim = 0).clone().detach().to(self.device)
+        print(self.opts.video_level)
+        if self.opts.video_level:
+            target = label.clone().detach().to(self.device).float()
+        else:
+            target = label.clone().detach().to(self.device).float()
+            target = target.repeat(ims.shape[0])
+        #TODO: send the video into the inversion to get the latent_code
+        with torch.no_grad():
+            latent_advs = self.from_ims_to_latent_directly(ims)
+        # latent_advs = self.from_ims_to_latent_directly(ims)
+        ori_latent = latent_advs.clone().detach()
+        latent_advs.requires_grad = True
+        channel = latent_advs.shape[1]
+        if self.opts.mask == 'full':
+            mask = [a for a in range(0, 18)]
+        elif self.opts.mask == 'mid':
+            mask = [a for a in range(6, 12)]
+        elif self.opts.mask == 'first':
+            mask = [a for a in range(0, 6)]
+        elif self.opts.mask == 'last':
+            mask = [a for a in range(12, 18)]
+        mask = torch.Tensor(mask).long()
+        print(mask)
+        ims_adv = self.from_latent_to_ims(latent_advs)
+        for i in range(self.opts.epoch):
+            # [N, C, H, W]
+            # N, C, H, W = ims_adv.shape
+            #TODO:send to classifier
+            # check data shape
+            loss_value = 0.0
+            if self.opts.lpips_lambda > 0:
+                loss_lpips = self.lpips_loss(ims_adv, ims)
+                print('loss_lpips:', loss_lpips)
+                loss_value += loss_lpips * self.opts.lpips_lambda
+
+            if self.opts.mse_lambda > 0:
+                loss_l2 = self.mse_loss(ims_adv, ims)
+                print('loss_l2:', loss_l2)
+                loss_value += loss_l2 * self.opts.mse_lambda
+            
+            if self.opts.id_lambda > 0:
+                loss_id, sim_improvement, id_logs = self.id_loss(ims_adv, ims, ims)
+                print('loss id:', loss_id)
+                loss_value += loss_id * self.opts.id_lambda
+
+            if self.opts.video_level:
+                ims_adv = ims_adv.unsqueeze(dim = 0)
+                ims_adv = ims_adv.permute(0, 2, 1, 3, 4)
+            softmax = nn.Softmax(dim = 1)
+            score = self.classifier(ims_adv)
+            print(score)
+            classifier_result = softmax(score)
+            decide_score = classifier_result[:, 1]
+            # calculate loss
+            loss_value += self.loss_fn(decide_score, target)
+            print('total loss:', loss_value)
+            # [1, channel, n, h, w]
+            grads = autograd.grad(loss_value, latent_advs, retain_graph = False, create_graph = False)[0]
+            # beta is the bound
+            if use_sign == 'yes':
+                # subscribe is the gradient increase direction
+                # alpha: each change magnitude
+                adv_latent = latent_advs.detach().clone()
+                adv_latent[:, mask, :] = latent_advs[:, mask, :] - self.alpha * grads[:, mask, :].sign() # use sign or not?
+                latent_advs = adv_latent
+                # beta: the change bound each time
+                # delta = torch.clamp(adv_latent - latent_adv, -self.beta, self.beta)
+                # latent_advs = adv_latent.detach()
+                # print(latent_advs.requires_grad)
+            elif use_sign == 'no':
+                # alpha: the learning rate
+                # beta: the change bound each time
+                delta = torch.clamp(self.alpha * grads, -self.beta, self.beta)
+                # print(delta)
+                # adv_latent = latent_advs.detach() - self.alpha * grads
+                latent_advs = latent_advs - delta.detach()
+            else:
+                # restrict the total change in the bound of beta
+                adv_latent = latent_advs.detach() - self.alpha * grads.sign()
+                delta = torch.clamp(adv_latent - ori_latent, -self.beta, self.beta)
+                latent_advs = (ori_latent + delta)
+            ims_adv = self.from_latent_to_ims(latent_advs)
+        
+        return ims_adv.detach()
+
 
     # input：x shape [faces, frames, channels, h, w]
     def mifgsm_attack(self, x, label):
@@ -343,7 +431,7 @@ class Attack_Video(nn.Module):
 
     def attack_one_video(self, video, label):
         """
-            video_frames: 输入的视频序列
+            video_frames: 输入的视频序�?
         """
         # attack on the video
         # return the inversion attack pics
@@ -391,7 +479,6 @@ def log_pics(save_dir, origin: torch.Tensor, modified: torch.Tensor):
     full_im = cv2.cvtColor(full_im, cv2.COLOR_RGB2BGR)
     cv2.imwrite(save_dir, full_im)
         
-
 def main():
     parser = ArgumentParser('attack with white box')
     parser.add_argument('--dataset', default = 'celebdf', type = str, help = 'attack dataset')
@@ -445,6 +532,8 @@ def main():
 
     attack = Attack_Video(opts)
     
+
+    
     if opts.dataset == 'celebdf':
         dataset = CELEB_DF(root_dir = opts.dataset_dir, 
                                 mix_real_fake = False,
@@ -474,7 +563,7 @@ def main():
 
     data_num = len(dataset)
     print(f'attack dataset len: {data_num}')
-    celebdf_dataloader = DataLoader(dataset, batch_size = 14, 
+    celebdf_dataloader = DataLoader(dataset, batch_size = 1, 
                                     shuffle = False,
                                     num_workers = 1,
                                     drop_last = True)
@@ -485,6 +574,11 @@ def main():
             attack.e4e.decoder.load_state_dict(get_keys(ckpt, 'decoder'), strict = True)
             attack.e4e.load_latent_avg(ckpt)
             opts.log_dir = log_folder + follow_what_attack[i - 1]
+        # else:
+        #     ckpt = torch.load(opts.checkpoint_path, map_location='cpu')
+        #     attack.e4e.encoder.load_state_dict(get_keys(ckpt, 'encoder'), strict = True)
+        #     attack.e4e.encoder.load_state_dict(get_keys(ckpt, 'encoder'), strict = True)
+        #     attack.e4e.load_latent_avg(ckpt)
         if not os.path.exists(opts.log_dir):
             os.mkdir(opts.log_dir)
             print(f"save all the logs to {opts.log_dir}")
@@ -498,9 +592,9 @@ def main():
             if index > opts.attack_num:
                 break
             video, label = data
-            imgs, labels = data
-            video = imgs.unsqueeze(0)
-            label = torch.Tensor([0])
+            print(video.shape)
+            print(label.shape)
+            label = torch.Tensor([1])
             index += 1
             print('pic index:', index)
             tic = time.time()
